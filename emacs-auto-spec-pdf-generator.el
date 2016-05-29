@@ -5,7 +5,7 @@
   (shell-command "pandoc -o /tmp/spec.pdf SPEC.md"))
 
 ; Update the spec pdf whenever the buffer is saved
-(add-hook 'after-save-hook (lambda () (generate-pdf-of-spec))
+(add-hook 'after-save-hook (lambda () (generate-pdf-of-spec)))
 
 ; Generate an initial version of the spec
 (generate-pdf-of-spec)

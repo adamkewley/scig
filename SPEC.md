@@ -1,11 +1,12 @@
-# scig
+# scig (functional spec)
+*This document outlines `scig`'s behaviors, interface, and design. It is a blueprint from which `scig` will be built and isn't suitable as documentation.*
 
-A utility that generates a HTTP server from a high-level device description file.
+## What is scig?
+`scig` is a utility that makes interfacing with devices easier. While most *communication ports* allow for two-way uncoupled, asynchronous IO, many *devices* follow a simple plaintext command-response pattern. Manually writing implementations for communicating with those devices can be repetitive. There's also numerous gotchas when working so close to the hardware layer: some of those gotchas can be abstracted away by `scig`.
 
-## What is `scig`?
-Many serial devices follow a simple plaintext command-response pattern. Manually writing implementations for these devices can be repetitive. Especially when the same device requires a library, server, and CLI implementation to be written. `scig` is a utility that uses a high-level, declarative device description file (`<input_file>`) to automatically generate those outputs.
+With `scig`, developers write a device specification file (`DEVICE_SPEC`). From that spec, `scig` generates a higher-level interface to the device. In this initial implementation, only a HTTP server can be generated from `DEVICE_SPEC`.
 
-The long-term goal of the `scig` project is to establish a stable input representation from which a wide variety of output implementations can be generated. However, as a proof of concept, this first implementation only generates a HTTP web service for controlling the device.
+The core philosophy of `scig` is "write once, use everywhere". The `DEVICE_SPEC` is designed to be a simple declarative data structure that can be easily parsed. In the longer term, this declarative approach should enable `DEVICE_SPEC` repositories and specialized applications to be built more easily.
 
 ## Usage
 
@@ -13,48 +14,48 @@ The long-term goal of the `scig` project is to establish a stable input represen
 $ scig [--help] <command> [<args>]
 $ scig start [--help]
 $ scig start <process_type> [--help] [<args>]
-$ scig start http [--help] [--port] <com_port> <input_file>
+$ scig start http [--help] [--port] <device_spec_file> <device_port>
 ```
 
 ## Examples
 
 ```bash
-# Shows the usage and <command>s listing
+# Show the usage and <command>s listing
 $ scig
 	
-# Shows scig general help
+# Show scig general help
 $ scig --help
 
-# Shows help for `scig start`
+# Show help for `scig start`
 $ scig start --help
 
-# Shows help for `scig start http`
+# Show help for `scig start http`
 $ scig start http --help
 
-# Starts a scig http server for controlling
-# the device (windows COM port style)
-$ scig start http COM4 input-file
+# Start a scig http server for controlling
+# the device (windows port identifier)
+$ scig start http device-spec COM4
 
-# Starts a http server for controlling
-# the device (linux serial port style)
-$ scig start http /dev/ttyS0 input-file
+# Start a http server for controlling
+# the device (*nix port identifier)
+$ scig start http device-spec /dev/ttyS0
 
-# Starts a scig http server on port 80
+# Start a scig http server on port 80
 # for controlling the device
-$ scig start http --port 80 /dev/ttyS0 input-file
+$ scig start http --port 80 device-spec /dev/ttyS0
 ```
 
-## `scig`
+## scig
 
 - `scig` is the application's name
 - `scig` is used through a standard command-line interface
 - Named arguments to `scig`'s command-line interface begin with one or two dashes (e.g. `-h` and `--help`)
-- Unnamed arguments passed to `scig` change its context. For example, passing "`start`" to `scig` will change its context such that it then accepts further arguments related to `start`ing a process.
-- The effect of arguments passed to `scig` depends on `scig`'s current context. For example, only providing the `--help` option to `scig` will show `scig`'s general help page; however, passing both `start` and `--help` will show the more specific `scig start` help page.
+- Unnamed arguments passed to `scig` change its context. For example, passing `start` to `scig` will change its context such that it then accepts further arguments related to `start`ing a process.
+- The effect of arguments passed to `scig` depends on `scig`'s context. For example, passing only `--help` to `scig` will show `scig`'s general help page; however, passing both `start` and `--help` will show the more specific `scig start` help page.
 - In this initial implementation, `scig` only supports changing its context *via* a single unnamed argument—`start`. Later versions of `scig` will support other subcommands (e.g. `compile` or `generate`)
 - Named options (e.g. `--port`) are collected by `scig` regardless of their location in a `scig`'s argument list. For example, "`scig --help start`" will exhibit the same behavior as "`scig start --help`". Likewise, "`scig --port 80 start http`" will exhibit the same behavior as "`scig start http --port 80`".
-- If insufficient or invalid arguments are supplied to a `scig` call then the `scig` process will write usage instructions / error messages to the standard error (`STDERR`) and return an error code of `1` (general error)
-- Regardless of context, specifying unrecognized arguments (for example, `--foo=bar`) will result in `scig` writing an error message to the standard error (`STDERR`) followed by terminating with a return code of `1` (general error)
+- If insufficient or invalid arguments are supplied to `scig` call then the `scig` process will write usage instructions / error messages to the standard error (`STDERR`) followed by terminating with an exit code of `1` (general error)
+- Regardless of context, specifying unrecognized arguments (for example, `--foo=bar`) will result in `scig` writing an error message to the standard error (`STDERR`) followed by terminating with an exit code of `1` (general error)
 
 ## `scig` Command-Line Options
 These command line options are available from the base context of `scig`. That is, the context of `scig` when no `command` unnamed arguments are provided to it.
@@ -62,14 +63,15 @@ These command line options are available from the base context of `scig`. That i
 ### `-h, --help`
 Show the general help documentation for `scig`. Contains a usage statement followed by a list of arguments for the base context, followed by a list of `command`s and their purpose, followed by some example usage cases.
 
-  - The help documentation will be written to the standard output (`STDOUT`)
+  - The help documentation will be written to the standard output
   - After it has been written to the standard output, the `scig` process will exit with a return code of `0` (no error)
 
 ## `scig` `<command>`s
 `scig` is composed of individual commands that each have their own command-specific options and behaviours. When calling `scig`, the name of the command is given (e.g. `scig start`) followed by command-specific options and arguments (e.g. `scig start http --port 80 /dev/ttyS0 input-file`). In this inital release, `scig` only supports the `start` command.
 
-  - The first unnamed argument supplied to `scig` is assumed to be the name of a command
-  - If the name is not recognized, `scig` shall print the following error message:
+  - The first unnamed argument supplied to `scig` is a `command` identifier
+  - If no unnamed argument as provided, `scig` should remain in its base context
+  - If an unnamed argument is provided but it is not a known `command` identifier, `scig` shall write the following message to the standard error:
 
   > `scig: '$first_argument' is not a scig command. See 'scig --help'.`
 
@@ -77,12 +79,13 @@ Show the general help documentation for `scig`. Contains a usage statement follo
 
 ### `scig start`
 
-- `scig start` is the syntax to start an ongoing `scig` processes such as a server or CLI client
-- If an initialization error occurs, the `scig start` process will write error/feedback messages to the standard error (`STDERR`) followed by terminating with a return code of `1` (general error) 
-- Once sucessfully initialized, a `scig start` session will continually run until it is explicitly stopped
-- When started via a CLI, the `scig start` process will exit with a return code of `130` if exited using the `CTRL+C` key combination
+- `start` is a `scig` `command`
+- `scig start` is the syntax to start an ongoing process such as a server or CLI client
+- In general, if an initialization error occurs, the `scig start` process shall write error/feedback messages to the standard error followed by terminating with a return code of `1` (general error) 
+- Once initialized, a `scig start` process will continually run until it is explicitly stopped
+- When started via a CLI, the `scig start` process may be terminated using the `CTRL+C` combination. If this is used, `scig` will exit with a return code of `130`
 - While running, the `scig start` process writes errors to the standard error (`STDERR`).
-- What `scig start` writes to the standard output (`STDOUT`) depends on the type of process that was started. For example, `http` shall write a human-readable representation of any HTTP request the server's port recieves
+- What `scig start` writes to the standard output on the type of process that was started. For example, `http` shall write a human-readable representation of any HTTP request the server's port recieves
 - `<process_type>` is case-sensitive and, in this initial implementation only `http` is supported
 
 ### `scig start` Options
@@ -90,19 +93,19 @@ Show the general help documentation for `scig`. Contains a usage statement follo
 ### `-h, --help`
 Show the usage of the `scig start` command, options, and available subcommands (e.g. `http`).
 
- - The help argument behaves exactly as it does when `scig` is in its base context. The only difference is that the documentation shown is related to `scig start`, not `scig` as a whole
+ - This argument behaves exactly as it does when `scig` is in its base context. The only difference is that the documentation shown is related to `scig start`, not `scig` as a whole
 
 ### `scig start` `<command>`s
 In this initial release, the only supported command is `http`.
 
-#### `http`
+#### `scig start http`
 Starts a server that allows the device's details, commands, and documentation to be requested with standard http requests.
 
-#### `http` Usage
+#### `scig start http` Usage
 
-    scig start http [--port=<port>] com_port input_file
+    scig start http [--port=<port>] device_spec_file device_port
 
-#### `http` Options
+#### `scig start http` Options
 
 ##### `-h, --help`
 *Optional*. Shows the `http` command's documentation, outlining its usage, options, and examples.
@@ -110,127 +113,129 @@ Starts a server that allows the device's details, commands, and documentation to
  - The help argument behaves exactly as it does when `scig` is in its base context. The only difference is that the documentation shown is related to `scig start http`, not the `scig` base context nor the `start` one.
 
 ##### `-p=<port>, --port=<port>`
-*Required*. The TCP port that the `scig` http server should listen on.
+*Required*. The TCP (ipv4) port that the `scig` http server should listen on.
 
-  - `<port>` is checked and allocated during the initialization of `scig`
-  - A malformed `<port>` will result in the following message being written to the standard error (`STDERR`):
+  - `<port>` is validated and allocated during the initialization of `scig`
+  - A malformed `<port>` will result in the following message being written to the standard error:
 
-  > `scig: The supplied port ($<port>) is not a valid. The port must be a number between 1-65535`.
+  > `scig: The supplied port ($<port>) is not valid. The port must be a number between 1-65535`.
 
   - (*cont.*) After writing that error message, the `scig` process will terminate with an exit code of `1` (general error)
-  - The `<port>` is already in use by another process will result in the following message being written to the standard error (`STDERR`):
+  - If `<port>` is already in use by another process then the following message shall be written to the standard error:
 
  > `scig: The supplied port ($<port>) is currently in use by another process: $process_details`
 
-  - (*cont.*) After writing the error message, the `scig` process will be terminated with an error code of `1` (general error)
-  - The `scig` process having insufficient privellages to open `<port>` will result in the following message being written to the standard error (`STDERR`):
+  - (*cont.*) After writing the error message, the `scig` process will terminate with an exit code of `1` (general error)
+  - If `scig` process has insufficient privellages to open `<port>` then the following message shall be written the standard error:
 
   > `scig: Cannot open the supplied port ($<port>). Access is denied.`
 
-  - (*cont.*) After writing that error message, the `scig` process will terminate with an error code of `1` (general error)
+  - (*cont.*) After writing that error message, the `scig` process will terminate with an exit code of `1` (general error)
 
-#### `com_port`
+#### `device_port`
 
-*Required*. The port that the serial device is connected to (e.g. `COM1` on Windows systems or `/dev/ttyS0` on Linux systems).
+*Required*. The port that the device is connected to (e.g. `COM1` on Windows systems or `/dev/ttyS0` on Linux systems).
 
-  - `com_port` is checked during the initialization of `scig`
-  - A malformed `com_port` value will result in the following error message being written to the standard output (`STDERR`):
+  - `device_port` is validated and allocated during the initialization of `scig`
+  - A malformed `device_port` value will result in the following error message being written to the standard error:
 
-  > `scig: The supplied serial port ($com_port) is not a valid serial port identifier. $platform_dependant_text`
+  > `scig: The supplied device port ($device_port) is not a valid serial port identifier. $platform_dependant_text`
 
-  - (*cont.*) The error message will contain platform-dependant messages because operating systems have differing methods of handling com port (e.g. `COMX` in windows, device files in unix). After writing the error message, the `scig` process will terminate with an error code of `1` (general error)
-  - A valid, but non-existient, `com_port` value will result in the following error messge being written to the standard output (`STDERR`)
+  - (*cont.*) The error message will contain platform-dependant messages. This is because operating systems have differing methods of identifying communication ports (e.g. `COMn` in windows, `/dev/ttySn` in unix). After writing the error message, the `scig` process will terminate with an exit code of `1` (general error)
+  - A valid, but non-existient, `device_port` value will result in the following messge being written to the standard error:
 
-  > `scig: The supplied serial port ($com_port) but does not exist.`
+  > `scig: The supplied serial port ($device_port) does not exist.`
 
   - (*cont.*) After writing the error message, the `scig` process will terminate with an error code of `1` (general error)
-  - `scig` needs exclusive read/write access to `com_port`. If `com_port` is already being in use by another process then the following message will be written to the stadard error (`STDERR`):
+  - `scig` needs exclusive read/write access to `device_port`. If `device_port` is already being in use by another process then the following message will be written to the standard error:
 
-  > `scig: The supplied serial port ($com_port) is already in use by another process ($process_details)`
+  > `scig: The supplied serial port ($device_port) is already in use by another process ($process_details)`
 
   - (*cont.*) After writing the error message, the `scig` process will be terminated with an error code of `1` (general error)
-  - The `scig` process having insufficient privellages to open `com_port` will result in the following message being written to the standard error (`STDERR`)
+  - The `scig` process having insufficient privellages to open `device_port` will result in the following message being written to the standard error
 
-  > `scig: Cannot open the supplied serial port ($com_port). Access is denied.`
+  > `scig: Cannot open the supplied serial port ($device_port). Access is denied.`
 
   - (*cont.*) After writing the error message, the `scig` process will terminated with an error code of `1` (general error)
 
-##### `input_file`
-*Required* the path to a `scig` serial device specification (`DEVICE_SPEC`)
+##### `device_spec_file`
+*Required* a path to a file containing a `scig` device specification (`DEVICE_SPEC`)
 
-  - A non-existient `input_file` path will result in the following error message being written to the standard output (`STDERR`):
+  - A non-existient `device_spec_file` path will result in the following error message being written to the standard output (`STDERR`):
 
-  > `scig: $input_file: No such file or directory`
-
-  - (*cont.*) After writing the error message, the `scig` process will terminate with an error code of `1` (general error)
-  - `scig` requires non-exclusive read access to `input_file` at initialization time. If another process has locked `input_file` from read access then the following message will be written to the standard error (`STDERR`)
-
-  > `scig: Cannot read $input_file. It is in use by another process ($process_information)
+  > `scig: $device_spec_file: No such file or directory`
 
   - (*cont.*) After writing the error message, the `scig` process will terminate with an error code of `1` (general error)
-  - If the `scig` process does not have sufficient privellages to read `input_file` then the following message will be written to the standard error (`STDERR`):
+  - `scig` requires non-exclusive read access to `device_spec_file` at initialization time. If another process has locked `device_spec_file` from read access then the following message will be written to the standard error (`STDERR`)
 
-  > `scig: Cannot open the supplied serial port ($com_port). Access is denied.
-
-  - (*cont.*) After writing the error message, the `scig` process will terminate with an error code of `1` (general error)
-  - The `scig` process should open `input_file` with shared read access permissions
-  - The `scig` process should release its handle to `input_file` once it has finished reading it. This is to facilicates scenarios in which many `scig` processes are booted from the same `input_file`
-  - The general format of `input_file` is that it must be a text file that uses a standard encoding (UTF-8). If `input_file` does not have that general format then the following message will be written to the standard error (`STDERR`):
-
-  > `scig: The format of $input_file is not recognized. input_file should be a plaintext file that uses a standard text encoding convention (e.g. utf-8)`
+  > `scig: Cannot open $device_spec_file. It is in use by another process ($process_information)`
 
   - (*cont.*) After writing the error message, the `scig` process will terminate with an error code of `1` (general error)
+  - If the `scig` process does not have sufficient privellages to read `device_spec_file` then the following message will be written to the standard error:
 
-  - The text content of `input_file` must follow the schema specified in `DEVICE_SPEC`. If it does not then the following error message with this general format will be written to the standard error (`STDERR`):
+  > `scig: Cannot open $device_spec_file. Insufficient privellages.`
 
-```
-$input:$parse_error.line:$parse_error.column error: $parse_error.message
-```
+  - (*cont.*) After writing the error message, the `scig` process will terminate with an error code of `1` (general error)
+  - The `scig` process should open `device_spec_file` with shared read access permissions
+  - The `scig` process should release its handle to `device_spec_file` once it has finished reading it. This is to facilicate scenarios in which many `scig` processes are created from the same `device_spec_file`
+  - The general format of `device_spec_file` is that it must be a text file that uses a standard encoding (utf-8). If `device_spec_file` does not have that format then the following message will be written to the standard error:
 
-  - (*cont.*) One of these messages will be generated for each error encountered in `input_file`. After writing the error message, the `scig` process will terminate with an error code of `1` (general error)
+  > `scig: The format of $device_spec_file is not recognized. device_spec_file should be a plaintext file that uses a standard text encoding convention (e.g. utf-8)`
+
+  - (*cont.*) After writing the error message, the `scig` process will terminate with an error code of `1` (general error)
+  - The text content of `device_spec_file` must follow the schema specified in `DEVICE_SPEC`. If it does not then the following error message with this general format will be written to the standard error (`STDERR`):
+
+  > `$device_spec_file: $parse_error_message`
+
+  - (*cont.*) One of these messages will be generated for each error encountered in `device_spec_file`. The `DEVICE_SPEC` parser is responsible for returning the appropriate line number, column number, and error message. After writing the error message, the `scig` process will terminate with an error code of `1` (general error)
 
 ## `DEVICE_SPEC`
-`DEVICE_SPEC` is the most important aspect of `scig`. In it, the specification of a serial device is described declaratively. `scig` *should* be able to generate a wide variety of interfaces From `DEVICE_SPEC` (eventually).
+`DEVICE_SPEC` is the most important part of `scig`. In it, the specification of a device is described declaratively. With that in mind, several high-level design choices were made when specifying `DEVICE_SPEC`:
+
+  - It should be human-readable and self-explanatory
+  - It should be easy for other applications to parse
+  - It should be extensible, allowing additional information to be implanted into it
+
+I initially considered a custom grammar for `DEVICE_SPEC`. However, that would make it difficult for other applications to parse `DEVICE_SPEC` files. Based on that, I investigated using `xml`, `json`, and `yaml`. Most general-purpose programming languages have parsers for these three formats.
+
+`xml` is by far the most mature and feature-rich of the three; however, it isn't particularly easy to read. `json` has fewer features than `xml` and is easier to both read and write; however, it still contains a decent amount of parentheses and delimiters. `yaml` has a roughly equivalent feature set to `json` but has fewer delimiters; however, it is whitespace-based, which many developers dislike.
+
+Overall, `yaml` was chosen because "it should be human-readable and self-explanatory" is an important philosophy of `scig`. It is an added bonus that `yaml` is also easy for other applications to parse and can be straightforwardly extended. 
 
 `DEVICE_SPEC` is a *text* specification, not a *cli* specification because a `scig` library user may parse an in-memory string containing the `DEVICE_SPEC`. Because of that, the error messages described in this section should be handled according to the context. For example, as described above, the `scig` CLI shall write errors to the standard error followed by terminating with an exit code of `1`. A library implementation may throw an exception containing the applicable error message.
 
 There are everal key points about the structure of `DEVICE_SPEC`:
 
- - The content of `DEVICE_SPEC` has a YAML-like structure. However, it cannot be guaranteed that `scig` supports all the features of the YAML specification
- - Comments within `DEVICE_SPEC` begin with a hash ( `#` ), can start anywhere on a line, and continue until the end of the line
- - Entries in `DEVICE_SPEC` are described as `key: value` pairs
- - `key`s are alphanumeric. Separate words within a `key` are separated as `camel_case`
- - Non-array `value`s span a single line. Multiline `value`s are not officially supported
- - Some `value`s, such as the the `value` for the `commands` key, have an array structure
- - Array elements are, like other entities, `key: value` pairs
- - Array items appear on a new line and are preceded by a dash ( `-` ). For example:
+ - `DEVICE_SPEC` follows a `yaml` structure
+ - In this section, "keys" refer to the field names within the file (e.g. `foo_key: foo_value`)
+ - Although not strictly required by the `yaml` specification, it is reccomended that keys in `DEVICE_SPEC` be alphanumeric and `camel_case`.
+ - While `yaml` support multiline `value`s, most of `scig`'s fields should span a single line. A syntax error will be produced if a multiline value is encounted for a `scig` field that is explicitally single line
 
-```yaml
-an_array:
-  - name: Item 1
-    foo: bar
-  - name: Item 2
-    key: value
-```
+`scig`'s `DEVICE_SPEC` parser shall produce four different types of messages:
+
+  - `ERROR` - The parser enountered a fatal error in `DEVICE_SPEC` that prevents the parse process from completing
+  - `WARNING` - The parser encountered a non-fatal issue with `DEVICE_SPEC`.
+  - `LINT` - The parser enountered a stylistic issue with `DEVICE_SPEC`.
+  - `FEEDBACK` - General feedback about the `DEVICE_SPEC` parsing process
 
 ## `DEVICE_SPEC` Example
 
 ```yaml
 # Comments begin with a hash
-
 device:
-  identifier: ika_ret_hotplate # This is also a comment
-  name: IKA RET Hotplate
-  # Optional: arbitrary information about the device
+  identifier: autosampler_9000 # This is also a comment
+  name: Acme Autosampler 9000
   metadata:
-	manufacturer: IKA
+	manufacturer: Acme
 	year_of_manufacture: 1992
 	device_api_version: 3
-	product_page_url: http://ika.com/ika-ret
+	product_page_url: http://acme.com/autosampler-9000
 
 # Unsupported keys are ignored by scig and allow
-# the scig file to be augmented with additional
-# data
+# the DEVICE_SPEC to be augmented with additional
+# data. Some keys are reserved, though. If a
+# reserved key is used, a warning will occur when
+# initializing scig
 an_unsupported_key: some_value 
 
 connection:
@@ -242,91 +247,97 @@ connection:
   string_terminator: \r\n
 
 commands:
-  set_device_name:
-    summary: Set the hotplate's name
-	outgoing_command_format:
-	  format: OUT_NAME $new_name
-	  $new_name type: string
-	  $new_name description: The new name of the device
-	incoming_response_template:
-	  template: (.+?) (.+?)
+  set_position:
+    summary: Set the position of the autosampler
+	outgoing_message:
+	  format: SET_POS $sample_position
+	  $sample_position type: string
+	  $sample_position description: The position of the sample (e.g. A2)
+	expected_response:
+	  pattern: ^(.+?) (.+?)$
 	  $1 type: string
-	  $1 description: The device's previous name
+	  $1 description: The autosampler's previous position
 	  $2 type: int
 	  $2 description: The transaction id
 	  
-  get_device_name:
-    summary: Get the hotplate's name
-	outgoing_command_format:
-	  format: IN_NAME
-	incoming_response_template:
-	  template: (\w+?) \d+
+  get_position:
+    summary: Get the current position of the autosampler
+	outgoing_message:
+	  is_always: GET_POS
+	expected_response:
+	  pattern: (\w+?) \d+
 	  $1 type: string
-	  $1 description: The device's name
+	  $1 description: The autosampler's current position
 ```
 
 ### `DEVICE_SPEC "device:"` Keys
-These keys describe the device. They only contain high-level information about the nature of the device (no technical details).
+Keys within `device:` what the device *is*.
 
 ### `identifier: DEVICE_IDENTIFIER`
 *Required*. A programmatic identifier for the device.
 
-  - Valid `DEVICE_IDENTIFIER`s must begin with a standard alphabetical letter followed by alphanumeric characters. If it does not, then the following error message shall be issued:
+  - A valid `DEVICE_IDENTIFIER` begins with a standard alphabetical letter followed by alphanumeric characters. If it does not, then the following `ERROR` shall be issued:
 
-  > `line:col: The supplied identifier, $DEVICE_IDENTIFIER, is invalid. The identifier must begin with a standard alphabetical letter (a-z) followed by alphanumeric characters. Words within the identifier should be separated by underscores. For example, "autosampler_9000"`
+  > `line:col: The supplied identifier, $DEVICE_IDENTIFIER, is invalid. The identifier must begin with a standard alphabetical letter (a-z) followed by alphanumeric characters. Words within the identifier should be separated by underscores. For example, "identifier: autosampler_9000"`
 
   - `DEVICE_IDENTIFIER` should be written in `camel_case`. Individual words within `DEVICE_IDENTIFIER` should be separated with underscores (e.g. `my_programattic_name`).
-  - The case of alphabetical characters within `DEVICE_IDENTIFIER` is ignored. If `DEVICE_IDENTIFIER` contains uppercase characters, the following warning shall be issued:
+  - The case of alphabetical characters within `DEVICE_IDENTIFIER` is ignored. If `DEVICE_IDENTIFIER` contains uppercase characters, the following `WARNING` shall be issued:
 
   > `line:col: The supplied identifier, $PROGRAMMATIC_NAME, contains uppercase characters. This is not a problem; however, scig will ignore the case of characters within $PROGRAMMATIC_NAME. It is reccomended you use an all lower-case camel_case name. For example, "my_device", rather than "My_Device". "identifer:" is only used programatically. You can specify a case-sensitive name for the device in the "name:" field`
   
-  - The absence of an `identifier:` key will result in the following error message being issued:
+  - The absence of an `identifier:` key will result in the following `ERROR` being issued:
   
-  >`line:col: device does not contain a "identifier" key. Scig requires an "identifer:" key to be present with a valid programmatic name for the device. For example, "identifier: nmr_barcode_reader"`
+  >`line:col: device does not contain a "identifier" key. Scig requires an "identifer:" key to be present with a valid programmatic name for the device. For example, "identifier: autosampler_9000"`
 
-- `COMMAND_IDENTIFIER` cannot be an established programming keyword **TODO**
+- `COMMAND_IDENTIFIER` cannot be a commonly used programming keyword (see appendix: "common reserved words"); for example, "`if`". If `COMMAND_IDENTIFIER` is a commonly used keyword then the following `ERROR` shall be issued.
+
+  > `line:col: The supplied identifier, $DEVICE_IDENTIFIER, is a common programming keyword. Identifiers must uniquely identify the device and have a small chance of being confused with a keyword when used in software. Identifiers must also begin with a standard alphabetical letter (a-z) followed by alphanumeric characters. Words within the identifier should be separated by underscores. For example, "identifier: autosampler_9000"`
 
 ### `name: DEVICE_NAME`
 *Required*. The name of the device.
 
-  - `DEVICE_NAME` must contain at least one non-whitespace character. If it does not then the following error message shall be issued:
+  - `DEVICE_NAME` must contain at least one non-whitespace character. If it does not then the following `ERROR` shall be issued:
 
-  > `line:col: The supplied name for the device is blank.
+  > `line:col: The supplied name for the device is blank.`
 
-  - `DEVICE_NAME` cannot contain multiple lines. If it does, then the following error message shall be issued:
+  - `DEVICE_NAME` cannot contain multiple lines. If it does, then the following `ERROR` shall be issued:
 
-  > `line:col: The supplied name for the device contains newlines. The device name must span a single line`
+  > `line:col: The supplied name for the device contains newlines. The device name must span a single line. For example, "name: Acme Autosampler 9000"`
 
-  - Apart from the whitespace restrictions, `DEVICE_NAME` can contain any characters supported by the character set of the string. For example, chineese characters such as `NYI` shall be supported.
-  - The absence of an `name:` key will result in the following error message being issued:
-  > `device: does not contain a "name" key. Scig requires a "name:" key to be present with the name of the device as its value. For example, "name: NMR Barcode Reader"`
+  - In addition to the whitespace restrictions, `DEVICE_NAME` must only contain ASCII characters. If non-ASCII characters are used in `DEVICE_NAME` then the following `ERRROR` shall be issued:
+
+  > `line:col The supplied name for the device contains special (non-ASCII) characters. This initial implementation of scig only supports ASCII characters in names`
+  
+  - The absence of an `name:` key will result in the following `ERROR` being issued:
+  
+  > `device: does not contain a "name" key. scig requires a "name:" key to be present with the name of the device as its value. For example, "name: Acme Autosampler 9000"`
 
 ### `metadata: METADATA_KEY_VALUES`
 *Optional*. Additional related metadata about the device.
 
   - Metadata is expressed as `key: value` pairs.
   - Metadata is guaranteed to have no reserved keys within it. Arbitrary `key: value` pairs can be put into the `metadata:` field without them being invalidated in later versions of `scig`.
-  - The `metadata:` key is optional. Its absence shall be treated as "no metadata available"
-  - If the `metadata:` key is present but no `key: value` pairs can be found within it then the following error shall be issued:
+  - The `metadata:` key is optional. Its absence shall be treated as "no metadata"
+  - If the `metadata:` key is present but no `key: value` pairs can be found within it then the following `ERROR` shall be issued:
 
-  > `line:col: A metadata key was specified but no values were found within it. "metadata:" is optional, and can be ommited if no metadata is available
+  > `line:col: A metadata key was specified but no values were found within it. "metadata:" is optional, and can be ommited if no metadata is available`
 
-  - If `METADATA_KEY_VALUES` are not `key: value` pairs (e.g. a string value was given) then the following error shall be issued:
+  - If `METADATA_KEY_VALUES` are not `key: value` pairs (e.g. a string value was given) then the following `ERROR` shall be issued:
 
   > `line:col: Invalid metadata key value. The metadata key should contain a set of key-value pairs`
 
-  - If duplicate `key`'s are found in `METADATA_KEY_VALUES` then the following error shall be issued:
+  - If duplicate `key`'s are found in `METADATA_KEY_VALUES` then the following `ERROR` shall be issued:
 
   > `line:col: A duplicate delcaration of $key was found in the metadata field`
 
-### `image: DEVICE_IMAGE`
-*Reserved*. `scig` shall produce a warning that this key is reserved and issues may be encountered with future versions of `scig` if it is used.
+### `image: DEVICE_IMAGE_PATH`
+*Reserved*. `scig` shall produce a `WARNING` that this key is reserved and issues may be encountered with future versions of `scig` if it is used.
 
 ### `manufacturer: MANUFACTURER`
-*Reserved*. `scig` shall produce a warning that this key is reserved and issues may be encountered with future versions of `scig` if it is used.
+*Reserved*. `scig` shall produce a `WARNING` that this key is reserved and issues may be encountered with future versions of `scig` if it is used.
 
 ### `other_names: OTHER_NAMES`
-*Reserved*. `scig` shall produce a warning that this key is reserved and issues may be encountered with future versions of `scig` if it is used.
+*Reserved*. `scig` shall produce a `WARNING` that this key is reserved and issues may be encountered with future versions of `scig` if it is used.
 
 ### `DEVICE_SPEC "connection:"` Keys
 These keys contain information about the physical connection to the device. In this initial implementation of `scig`, only `RS232` connections are supported.
@@ -334,76 +345,76 @@ These keys contain information about the physical connection to the device. In t
 ### `baud_rate: BAUD_RATE`
 *Required*. The baud rate of the connection in bits per second (bps).
 
-  - If `BAUD_RATE` is not a positive integer then the following error shall be issued:
+  - If `BAUD_RATE` is not a positive integer then the following `ERROR` shall be issued:
 
   > `line:col: Invalid baud rate. The baud rate is in bits per second and must be a positive integer. For example, "baud_rate: 9600"`
 
-  - If the `baud_rate` key is absent, then the following error shall be issued:
+  - If the `baud_rate` key is absent, then the following `ERROR` shall be issued:
 
-  > `line:col: connection does not contain a "baud_rate" key. scig requires a baud_rate key with a valid value. For example, "baud_rate: 9600"
+  > `line:col: connection does not contain a "baud_rate" key. scig requires a baud_rate key with a valid value. For example, "baud_rate: 9600"`
 
 ### `parity: PARITY (even|odd|none)`
 *Required*. The parity of the connection.
 
-  - `PARITY` is case-sensitive and must have a value of `even`, `odd`, or `none`. If `PARITY` is invalid, the following error shall be issued:
+  - `PARITY` is case-sensitive and must have a value of `even`, `odd`, or `none`. If `PARITY` is invalid, the following `ERROR` shall be issued:
 
-  > `line:col: Invalid value for parity ($PARITY). Supported values are 'even', 'odd', or 'none'. For example: "parity: even".
+  > `line:col: Invalid value for parity. Supported values are even, odd, or none. For example: "parity: even".`
 
   - If the `parity:` key is absent, then the following error shall be issued:
 
-  > `line:col: connection does not contain a "parity" key. scig requires a parity key with a value of 'even', 'odd', or 'none'. For example: "parity: even".
+  > `line:col: connection does not contain a "parity" key. scig requires a parity key with a value of even, odd, or none. For example: "parity: even".`
 
 ### `data_bits: DATA_BITS (1|2|3|4|5|6|7|8)`
 *Required*. The number of data bits in a packet sent through the connection.
 
-  - If `DATA_BITS` is not `1`, `2`, `3`, `4`, `5`, `6`, `7`, or `8` then the following error shall be issued:
+  - If `DATA_BITS` is not `1`, `2`, `3`, `4`, `5`, `6`, `7`, or `8` then the following `ERROR` shall be issued:
 
-  > `line:col: Invalid value for data_bits ($DATA_BITS). The value must be either '1', '2', '3', '4', '5', '6', or '8'. For example, "data_bits: 8".
+  > `line:col: Invalid value for data_bits ($DATA_BITS). The value must be either 1, 2, 3, 4, 5, 6, or 8. For example, "data_bits: 8".`
 
-  - If the `data_bits` key is absent then the following error shall be issued:
+  - If the `data_bits` key is absent then the following `ERROR` shall be issued:
 
-  > `line:col: connection does not contain a "data_bits" key. scig requires a data_bits key with a value of '1', '2', '3', '4', '5', '6', or '8'. For example, "data_bits: 8".
+  > `line:col: connection does not contain a "data_bits" key. scig requires a data_bits key with a value of 1, 2, 3, 4, 5, 6, or 8. For example, "data_bits: 8".`
 
 ### `stop_bits: STOP_BITS (0|1|1.5|2)`
 *Required*. The number of stop bits that terminate a data packet sent through the connection.
 
-  - If `STOP_BITS` is not '0', '1', '1.5', or '2' then the following error shall be issued:
+  - If `STOP_BITS` is not `0`, `1`, `1.5`, or `2` then the following `ERROR` shall be issued:
 
-  > `line:col: Invalid value for stop_bits ($STOP_BITS). The value must be either 0, 1, 1.5, or 2. For example, "stop_bits: 1".
+  > `line:col: Invalid value for stop_bits. The value must be either 0, 1, 1.5, or 2. For example, "stop_bits: 1".`
 
-  - If the `stop_bits` key is absent then the following error shall be issued:
+  - If the `stop_bits` key is absent then the following `ERROR` shall be issued:
 
-  > `line:col: connection does not contain a "stop_bits" key. scig requires a stop_bits key with a value of 1, 2, 3, or 4. For example, "stop_bits: 4".
+  > `line:col: connection does not contain a "stop_bits" key. scig requires a stop_bits key with a value of 1, 2, 3, or 4. For example, "stop_bits: 4".`
 
 ### `timeout: TIMEOUT (N ms|s) (default: 20 ms)`
 *Optional*. The maximum timespan a read/write operation through the connection can take before timing out.
 
-  - If a `timeout:` key is not supplied, a default `TIMEOUT` of `20 ms` is used. If the default is used, `DEVICE_SPEC` linters shall issue the following advice:
+  - If a `timeout:` key is not supplied, a default `TIMEOUT` of `20 ms` is used. If the default is used, `DEVICE_SPEC` linters shall issue the following `LINT` advice:
 
-  > `line:col connection does not contain a timeout value. scig will default to a timeout of "20 ms"; however, it is reccomended that you explicitly set a representative timeout value for the $DEVICE_NAME. For example: "timeout: 1 s"
+  > `line:col connection does not contain a timeout value. scig will default to a timeout of "20 ms"; however, it is reccomended that you explicitly set a representative timeout value for the $DEVICE_NAME. For example: "timeout: 1 s"`
 
-  - If a `timeout:` key is supplied then `TIMEOUT` must have the form "`N` `unit`" where `N` is a positive integer and `unit` is either `ms` (milliseconds) or `s` (seconds). If the format of `TIMEOUT` is invalid then an error shall be issued:
+  - If a `timeout:` key is supplied then `TIMEOUT` must have the form "`N` `unit`" where `N` is a positive integer and `unit` is either `ms` (milliseconds) or `s` (seconds). If the format of `TIMEOUT` is invalid then an `ERROR` shall be issued:
 
-> `line:col connection timeout ($TIMEOUT) is not a valid value. Timeouts must be specified as a positive integer followed by the time's unit of measure (either ms or s). For example, "timeout: 20 ms"`
+> `line:col connection timeout is invalid. Timeouts must be specified as a positive integer followed by the time's unit of measure (either ms or s). For example, "timeout: 20 ms"`
 
 ### `string_terminator: TERMINATOR (\r\n|\n)`
-*Required*. The characters that indicate the end of string send through the connection.
+*Required*. The characters that indicate the end of string sent through the connection.
 
   - `TERMINATOR` shall be used to construct a string when reading signals from the device
   - `TERMINATOR` shall be appended to the end of any strings sent to the device
-  - `TERMINATOR` must have a value of either `\r\n` or `\n`. If `TERMINATOR` is invalid then the following error shall be issued:
+  - `TERMINATOR` must have a value of either `\r\n` or `\n`. If `TERMINATOR` is invalid then the following `ERROR` shall be issued:
 
-  > `line:col connection string_terminator ($TERMINATOR) is not a valid value. The string terminator must be either '\n' or '\r\n'. For example: "string_terminator: \n"`
+  > `line:col connection string_terminator is not a valid. The string terminator must be either '\n' or '\r\n'. For example: "string_terminator: \n"`
 
-  - If the `terminator:` key is absent then the following error shall be issued:
+  - If the `terminator:` key is absent then the following `ERROR` shall be issued:
 
-  > `line:col connection does not contain a "string_terminator" key. scig requires a string_terminator key with a value of '\n' or '\r\n'. For example, "string_terminator: \r\n"`
+  > `line:col connection does not contain a "string_terminator" key. scig requires a string_terminator key with a value of \n or \r\n. For example, "string_terminator: \r\n"`
 
 ### `encoding: ENCODING`
-*Reserved*. `scig` shall produce a warning that this key is reserved and issues may be encountered with future versions of `scig` if it is used.
+*Reserved*. `scig` shall produce a `WARNING` that this key is reserved and issues may be encountered with future versions of `scig` if it is used. (this initial implementation of `scig` assumes ASCII encoding)
 
 ### `handshake: HANDSHAKE`
-*Reserved*. `scig` shall produce a warning that this key is reserved and issues may be encountered with future versions of `scig` if it is used.
+*Reserved*. `scig` shall produce a `WARNING` that this key is reserved and issues may be encountered with future versions of `scig` if it is used.
 
 ### `DEVICE_SPEC commands:` Keys
 *Optional* The `commands` key contains an array of `COMMAND_DESCRIPTION`s that describe, delcaratively, the possible commands that the device can recieve (via the connection).
@@ -418,19 +429,24 @@ commands:
     COMMAND_DESCRIPTION
   COMMAND_IDENTIFIER:
     COMMAND_DESCRIPTION
-  .
-  .
-  .
 ```
+
+Spec:
 
   - `COMMAND_IDENTIFIER` must begin with a standard alphabetical letter followed by alphanumeric characters. If it does not, then the following error message shall be issued:
 
-  > `line:col:` The supplied command identifier, $COMMAND_IDENTIFIER, is invalid. A command identifier must begin with a standard alphabetical letter (a-z) and can be followed by alphanumeric characters and underscores. Words within the command identifier should be separated by underscores. For example: "get_sample_list:"
+  > `line:col: The supplied command identifier, $COMMAND_IDENTIFIER, is invalid. A command identifier must begin with a standard alphabetical letter (a-z) and can be followed by alphanumeric characters and underscores. Words within the command identifier should be separated by underscores. For example: "get_sample_list:"`
 
   - `COMMAND_IDENTIFIER` should be written in `camel_case`. That is, individual words within `COMMAND_IDENTIFIER` should be seaprated with underscores (e.g. `foo_command`)
   - The case of alphabetical characters within `COMMAND_IDENTIFIER` are ignored. If `COMMAND_IDENTIFIER` contains uppercase characters, the following warning shall be issued:
 
   > `line:col: The supplied command identifier, $COMMAND_IDENTIFIER, contains uppercase characters. This is not a problem; however, scig will ignore the case of characters within $COMMAND_IDENTIFIER. It is reccomended you use an all lower-case camel_case name. For example, "my_device", rather than "My_Device". "identifer:" is only used programatically. You can specify a case-sensitive name for the device in the "name:" field`
+
+**TODO**: Post-normalization name collisions
+
+  - If a duplicate `COMMAND_IDENTIFIER` appears within `commands:` then the following `ERROR` shall be issued:
+
+  > `line:col TODO`
 
   - `COMMAND_IDENTIFIER` cannot be an established programming keyword **TODO**
 
@@ -438,17 +454,17 @@ commands:
 `COMMAND_DESCRIPTION` defines a command that the device can perform. Commands in this context are defined to be messages that the device can recieve and expected responses from the device. An example of a `COMMAND_DESCRIPTION` is:
 
 ```
-summary: Set the hotplate's name
-outgoing_message:
-  has_format: OUT_NAME $new_name
-  $new_name type: string
-  $new_name description: The new name of the device
-expected_response:
-  follows_pattern: ^(.+?) (.+)$
-  $1 identifier: old_name
-  $1 description: The device's previous name
-  $2 name: command_number
-  $2 description: The command number of this set_device_name call
+summary: Set the position of the autosampler
+  outgoing_message:
+    format: SET_POS $sample_position
+	$sample_position type: string
+	$sample_position description: The position of the sample (e.g. A2)
+  expected_response:
+    pattern: ^(.+?) (.+?)$
+    $1 type: string
+    $1 description: The autosampler's previous position
+    $2 type: int
+    $2 description: The transaction id
 ```
 
 The following keys make up a `COMMAND_DESCRIPTION`:
@@ -460,7 +476,7 @@ The following keys make up a `COMMAND_DESCRIPTION`:
   - `COMMAND_SUMMARY` can be any valid string; however, line breaks will be stripped from `COMMAND_SUMMARY` to produce a single-line string
   - `COMMAND_SUMMARY` must contain at least one non-whitespace character. If it does not, then the following error shall be issued:
 
-  > `line:col` summary: must contain at least one non-whitespace character. The summary is typically a one-sentence, readable description of the command. For example: "summary: Get the name of the autosampler"
+  > `line:col summary: must contain at least one non-whitespace character. The summary is typically a one-sentence, readable description of the command. For example: "summary: Set the position of the autosampler"`
 
   - If the `summary:` key is absent from the `COMMAND_DESCRIPTION` then the following error shall be issued:
 
@@ -493,31 +509,16 @@ The following keys make up a `COMMAND_DESCRIPTION`:
 
 ```
     outgoing_message:
-		has_format: TAKE_MEASUREMENT
+		is_always: TAKE_MEASUREMENT
 ```
 
 An example of an `OUTGOING_MESSAGE` that supports variance is:
 
 ```
 	outgoing_message:
-	    has_format: OUT_NAME $new_name
+	    format: OUT_NAME $new_name
 		$new_name type: string
 		$new_name description: The new name of the device
-```
-
-The general structure of `OUTGOING_MESSAGE` is:
-
-```
-	outgoing_message:
-		has_format: $variable_1 SOME_TEXT $variable_2 ... (etc.)
-		$variable_1 type: string
-		$variable_1 description: Description of $variable_1
-		$variable_2 type: decimal
-		$variable_2 description: Description of $variable_2
-		# .
-		# .
-		# .
-		# (etc.)
 ```
 
 ### `has_format: TEMPLATE`
@@ -623,7 +624,7 @@ The output from `scig` is command dependent. In general, subcommands to `scig st
 ## `scig start http` Behaviors
 `scig start http` will start a HTTP server (`SERVER`) that listens for requests on the TCP port specified by the `--port` flag (`PORT`).
 
-- The `scig start http` processes uses the `<input_file>` and `<com_port>` arguments to `scig start http` to create a serial connection to the device
+- The `scig start http` processes uses the `<device_spec_file>` and `<device_port>` arguments to `scig start http` to create a serial connection to the device
 - Once a connection to the device has been opened, the process will open a TCP port (identified by `PORT`) and continuously listen for incoming messages as a `SERVER`
 - The `SERVER` is a standard HTTP server and will respond as per the `HTTP/1.1` specification
 - `SERVER` supports `application/xml`, `application/json`, and `application/html` response formats
@@ -641,3 +642,114 @@ Each `COMMAND_DESCRIPTION` in the `DEVICE_SPEC` is exposed as a resource on `SER
 - The command's `identifier` is used as the path for the resource. For example, an identifier of `get_device_name` will be exposed at `http://address:PORT/get-device-name`
 - When `SERVER` recieves a `GET` request for the resource, it will send an outgoing command, specified in the `OUTGOING_MESSAGE` part of the `COMMAND_DESCRIPTION`, to the device and handle the response from the device according to the `INCOMING_COMMAND_FORMAT` description. It will then produce a response `TODO: Spec for response based on format specification`
 - Specify how arguments are dealt with
+
+## Appendix: Common Programming Keywords
+
+- abstract
+- and
+- as
+- assert
+- boolean
+- base
+- bool
+- break
+- byte
+- case
+- catch
+- char
+- checked
+- class
+- const
+- continue
+- default
+- decimal
+- def
+- del
+- delegate
+- do
+- double
+- else
+- elif
+- enum
+- event
+- exec
+- except
+- explicit
+- extends
+- extern
+- false
+- from
+- final
+- finally
+- fixed
+- float
+- for
+- foreach
+- global
+- goto
+- if
+- implements
+- implicit
+- import
+- instanceof
+- in
+- int
+- interface
+- internal
+- is
+- lambda
+- lock
+- long
+- namespace
+- native
+- new
+- not
+- null
+- object
+- operator
+- out
+- or
+- override
+- pass
+- package
+- params
+- private
+- print
+- protected
+- public
+- raise
+- readonly
+- ref
+- return
+- sbyte
+- sealed
+- short
+- sizeof
+- stackalloc
+- static
+- strictfp
+- string
+- struct
+- super
+- switch
+- synchronized
+- this
+- throw
+- throws
+- true
+- transient
+- try
+- typeof
+- unit
+- ulong
+- unchecked
+- unsafe
+- ushort
+- using
+- virtual
+- void
+- volatile
+- with
+- while
+- yield
+
