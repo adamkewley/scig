@@ -1,0 +1,48 @@
+# Comments begin with a hash
+device:
+  identifier: autosampler_9000 # This is also a comment
+  name: Acme Autosampler 9000
+  metadata:
+    manufacturer: Acme
+    year_of_manufacture: 1992
+    device_api_version: 3
+    product_page_url: http://acme.com/autosampler-9000
+
+# Unsupported keys are ignored by scig and allow
+# the DEVICE_SPEC to be augmented with additional
+# data. Some keys are reserved, though. If a
+# reserved key is used, a warning will occur when
+# initializing scig
+an_unsupported_key: some_value
+
+connection:
+  baud_rate: 9600
+  parity: even
+  data_bits: 7
+  stop_bits: 1
+  timeout: 200 ms
+  character_encoding: ascii
+  string_terminator: \r\n
+
+commands:
+  set_position:
+    summary: Set the position of the autosampler
+    outgoing_message:
+      format: SET_POS $sample_position
+      $sample_position type: string
+      $sample_position description: The position of the sample (e.g. A2)
+      expected_response:
+        pattern: ^(.+?) (.+?)$
+        $1 type: string
+        $1 description: The autosampler's previous position
+        $2 type: int
+        $2 description: The transaction id
+
+      get_position:
+       summary: Get the current position of the autosampler
+       outgoing_message:
+         is_always: GET_POS
+         expected_response:
+           pattern: (\w+?) \d+
+           $1 type: string
+           $1 description: The autosampler's current position

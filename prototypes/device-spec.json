@@ -1,0 +1,51 @@
+{
+    "device": {
+	"identifier": "autosampler_9000",
+	"name": "Acme Autosampler 9000",
+	"metadata": {
+	    "manufacturer": "Acme",
+	    "yearOfManufacture": "1992",
+	    "deviceApiVersion": "3",
+	    "productPageUrl": "http://acme.com/autosampler-9000"
+	}
+    },
+
+    "anUnsupportedKey": "some_value",
+
+    "connection": {
+	"baudRate": 9600,
+	"parity": "even",
+	"dataBits": 7,
+	"stopBits": 1,
+	"timeout": "200 ms",
+	"characterEncoding": "ascii",
+	"stringTerminator": "\r\n"
+    }
+
+    "commands": {
+	"setPosition": {
+	    "summary": "Set the position of the autosampler",
+	    "outgoingMessage": {
+		"format": "SET_POS $sample_position",
+		"$sample_position type": "string",
+		"$sample_position description": "The position of the sample (e.g. A2)"
+	    }
+	    "expectedResponse": {
+		"pattern": "^(.+?) (.+?)$",
+		"$1 type": "string",
+		"$1 description": "The autosampler's previous position",
+		"$2 type": "int",
+		"$2 description": "The transaction id"
+	    }
+	},
+	"getPosition": {
+	    "summary": "Get the current position of the autosampler",
+	    "outgoingMessage": { "isAlways": "GET_POS" },
+	    "expectedResponse": {
+		"pattern": "(\w+?) \d+",
+		"$1 type": "string",
+		"$1 description": "The autosampler's current position"
+	    }
+	}
+    }
+}

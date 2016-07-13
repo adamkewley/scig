@@ -1,0 +1,53 @@
+<!-- Comments are held between these two tokens -->
+
+<device identifier="autosampler_9000" name="Acme Autosampler 9000">
+  <metadata>
+	<entry id="manufacturer">Acme</entry>
+	<entry id="year-of-manufacture">1992</entry>
+	<entry id="device-api-version">3</entry>
+	<entry id="product-page-url">http://acme.com/autosampler-9000</entry>
+  </metadata>
+
+  <!-- Unsupported keys are ignored by scig and allow
+       the DEVICE_SPEC to be augmented with additional
+       data. Some keys are reserved, though. If a
+       reserved key is used, a warning will occur when
+       initializing scig -->
+  <an-unsupported-key>some_value</an-unsupported-key>
+
+  <connection>
+    <baud-rate>9600</baud-rate>
+    <parity>even</parity>
+    <data-bits>7</data-bits>
+    <stop-bits>1</stop-bits>
+    <timeout units="ms">200</timeout>
+    <character-encoding>ascii</character-encoding>
+    <string-terminator>\r\n</string-terminator>
+  </connection>
+
+  <commands>
+
+    <command identifier="set-position">
+      <summary>Set the position of the autosampler</summary>
+      <outgoing-message>
+	<format>SET POS $sample_position</format>
+	<variable id="$sample_position" type="string" description="The position of the sample (e.g. A2) />
+      </outgoing-message>
+      <expected-response>
+	<pattern>^(.+?) (.+?)$</pattern>
+	<capture-group index="1" type="string" description="The autosampler's previous position" />
+	<capture-group index="2" type="int" description="The transaction ID" />
+      </expected-response>
+    </command>
+
+    <command identifier="get-position">
+      <summary>Get the current position of the autosampler</summary>
+      <outgoing-message is-always="GET_POS" />
+      <expected-response>
+	<pattern>(\w+?) \d+</pattern>
+	<capture-group index="1" type="string" description="The autosampler's current position" />
+      </expected-response>
+    </command>
+
+  </commands>
+</device>
