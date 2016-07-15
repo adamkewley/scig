@@ -72,7 +72,8 @@ $ scig start http --port 80 device-spec /dev/ttyS0
 - The effect of arguments passed to `scig` depends on `scig`'s context. For example, passing only `--help` to `scig` will show `scig`'s general help page; however, passing both `start` and `--help` will show the more specific `scig start` help page.
 - In this initial implementation, `scig` only supports changing its context *via* a single unnamed argument—`start`. Later versions of `scig` will support other subcommands (e.g. `compile` or `generate`)
 - Named options (e.g. `--port`) are collected by `scig` regardless of their location in a `scig`'s argument list. For example, "`scig --help start`" will exhibit the same behavior as "`scig start --help`". Likewise, "`scig --port 80 start http`" will exhibit the same behavior as "`scig start http --port 80`".
-- If insufficient or invalid arguments are supplied to `scig` call then the `scig` process will write usage instructions / error messages to the standard error (`STDERR`) followed by terminating with an exit code of `1` (general error)
+- If invalid arguments are supplied to `scig` call then the `scig` process will write usage instructions to the standard error (`STDERR`) followed by terminating with an exit code of `1` (general error)
+- If insufficient arguments are supplied to a `scig` call then the `scig` process will write the help documentation to the standard error followed by terminating with an exit code of `1` (general error)
 - Regardless of context, specifying unrecognized arguments (for example, `--foo=bar`) will result in `scig` writing an error message to the standard error (`STDERR`) followed by terminating with an exit code of `1` (general error)
 
 ## `scig` Command-Line Options
@@ -83,11 +84,9 @@ Show the general help documentation for `scig`.
 
    - The help documentation will be written to the standard output
 
-     - Contains a general header explaining `scig`
 	 - Contains a usage statement
 	 - Contains a list of arguments for the base context
 	 - Contains a list of `command`s and their purpose
-	 - Contains example usage cases
 
   - (*cont.*) After the documentation has been written to the standard output, the `scig` process will terminate with an exit code `0` (no error)
 
@@ -98,7 +97,7 @@ Show the general help documentation for `scig`.
   - If no unnamed arguments are provided, `scig` should remain in its base context
   - If an unnamed argument is provided but it is not a known `command` identifier, `scig` shall write the following message to the standard error:
 
-  > `scig: '$first_argument' is not a scig command. This version of scig only supports the 'scig start' command. See 'scig --help'.`
+  > `scig: '$first_argument' is not a scig command. See 'scig --help'.`
 
   - (*cont.*) After printing the error message, the `scig` process shall exit with a return code of `1` (general error)
 

@@ -1,0 +1,86 @@
+#!/usr/bin/env ruby
+
+require 'optparse'
+require_relative 'scig_start'
+
+# Options for top-level context
+options = {
+  show_help: false,
+  unknown_options_provided: false
+}
+
+$supported_commands = [
+  SubCommand.new('start', 'Start an ongoing process', lambda { |argv| scig_start argv })
+]
+
+current_context_arguments = ARGV.dup
+
+# Parse the options provided relative to the base context of scig. The remaining
+# unnamed arugments are context changes (start, http, etc.)
+option_parser = OptionParser.new do |opts|
+  opts.banner = "Usage: scig [options]"
+
+  opts.on("-h", "--help") do |show_help|
+    options[:show_help] = show_help
+  end
+end
+
+begin
+  option_parser.parse! current_context_arguments
+rescue OptionParser::InvalidOption
+  options[:unknown_options_provided] = true
+end
+
+# .parse! mutated the array, the remainder is unnamed args
+unnamed_arguments = current_context_arguments
+
+def resolve_base_context(options, option_parser)
+  if options[:unknown_options_provided]
+    # TODO: "unkown option: $opt_name"
+    STDERR.puts option_parser.banner
+    exit 1
+  elsif options[:show_help]
+    usage_and_options = option_parser.help
+    commands = $supported_commands.map(&:to_help_text).join("\n")
+
+    puts usage_and_options
+    puts "Commands: "
+    puts commands
+
+    exit 0
+  else
+    # Insufficient arguments
+    STDERR.puts option_parser.banner
+    exit 1
+  end
+end
+
+def jump_to_sub_context(unnamed_arguments)
+  command = unnamed_arguments.first
+
+  is_a_supported_command =
+    $supported_commands.map(&:identifier).include? command
+
+  if is_a_supported_command
+    command_to_jump_to =
+      $supported_commands.
+      select { |supported_command| supported_command.identifier == command }.
+      first
+
+    # Remove the $command_identifier argument because, effectively, the base
+    # context has "dealt" with it
+    arguments_to_pass_to_sub_context =
+      ARGV.select { |arg| arg != command_to_jump_to.identifier }
+
+    command_to_jump_to.entry_method.call(arguments_to_pass_to_sub_context)
+  else
+    STDERR.puts "scig: '#{command}' is not a scig command. See 'scig --help'."
+    exit 1
+  end
+end
+
+if unnamed_arguments.length == 0
+  resolve_base_context options, option_parser
+else
+  jump_to_sub_context(unnamed_arguments)
+end
