@@ -1,0 +1,12 @@
+device:
+  identifier: a_basic_but_valid_device_spec
+  name: A basic but valid device spec
+
+connection:
+  baud_rate: 9600
+  parity: even
+  data_bits: 7
+  stop_bits: 1
+  timeout: 200 ms
+  character_encoding: ascii
+  string_terminator: \r\n

@@ -15,8 +15,10 @@ $supported_commands = [
 
 current_context_arguments = ARGV.dup
 
-# Parse the options provided relative to the base context of scig. The remaining
-# unnamed arugments are context changes (start, http, etc.)
+# Parse the options provided relative to the base context of scig. The
+# remaining unnamed arugments are context changes (start, http, etc.)
+# TODO: This this optionparser culling unnamed args if there's an
+# option
 option_parser = OptionParser.new do |opts|
   opts.banner = "Usage: scig [options]"
 

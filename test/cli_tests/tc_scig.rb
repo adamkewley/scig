@@ -2,7 +2,7 @@ require "test/unit"
 require "open3"
 require_relative "cli-helpers"
 
-class TestScigBaseContextCli < Test::Unit::TestCase
+class TestScig < Test::Unit::TestCase
 
   # Should be able to write the help documentation
   def test_show_help_is_successful
@@ -25,12 +25,16 @@ class TestScigBaseContextCli < Test::Unit::TestCase
     end
   end
 
+  # (spec) Contains a general header explai
+
   # (spec) Contains a usage statement
   def test_show_help_contains_usage_statement
     help_text = `#{SCIG_CLI} --help`
 
-    # TODO: make this more robust
-    assert help_text.downcase.include? 'usage'
+    help_text.downcase!
+
+    assert help_text.include? 'usage'
+    assert help_text.include? 'scig'
   end
 
   # (spec) Contains a list of arguments for the base context

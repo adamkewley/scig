@@ -2,7 +2,7 @@ require "test/unit"
 require "open3"
 require_relative "cli-helpers"
 
-class TestScigStartContextCli < Test::Unit::TestCase
+class TestScigStart < Test::Unit::TestCase
   # Should be able to see the "scig start" help documentation.
   def test_show_scig_start_help_is_successful
     `#{SCIG_CLI} start --help`

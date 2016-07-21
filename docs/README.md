@@ -84,9 +84,9 @@ Show the general help documentation for `scig`.
 
    - The help documentation will be written to the standard output
 
-	 - Contains a usage statement
-	 - Contains a list of arguments for the base context
-	 - Contains a list of `command`s and their purpose
+         - Contains a usage statement
+         - Contains a list of arguments for the base context
+         - Contains a list of `command`s and their purpose
 
   - (*cont.*) After the documentation has been written to the standard output, the `scig` process will terminate with an exit code `0` (no error)
 
@@ -120,10 +120,9 @@ Show the usage of the `scig start` command, options, and available subcommands (
 
  - The help documentation will be written to the standard output
 
-     - Contains a general header explaining `scig start`
-	 - Contains a usage statement
-	 - Contains a list of commands for the `start` context
-	 - Contains example usage cases
+         - Contains a usage statement
+         - Contains a list of arguments for the `start` context
+         - Contains a list of commands for the `start` context
 
  - (*cont.*) After the documentation has been written to the standard output, the `scig` process will terminate with an exit code of `0` (no error)
 
@@ -160,16 +159,12 @@ Starts a server that allows the device's details, commands, and documentation to
   > `scig: The supplied port ($<port>) is not valid. The port must be a number between 1-65535`.
 
   - (*cont.*) After writing that error message, the `scig` process will terminate with an exit code of `1` (general error)
-  - If `<port>` is already in use by another process then the following message shall be written to the standard error:
+  - If `<port>` is already in use by another process or the `scig` process has insufficient privellages to open `<port>` then the following message shall be written the standard error:
 
- > `scig: The supplied port ($<port>) is currently in use by another process: $process_details`
+ > `scig: Cannot open the supplied port ($<port>). Access is denied.`
 
   - (*cont.*) After writing the error message, the `scig` process will terminate with an exit code of `1` (general error)
-  - If `scig` process has insufficient privellages to open `<port>` then the following message shall be written the standard error:
-
-  > `scig: Cannot open the supplied port ($<port>). Access is denied.`
-
-  - (*cont.*) After writing that error message, the `scig` process will terminate with an exit code of `1` (general error)
+  -
 
 ##### `device_spec_file`
 *Required*. A path to a file containing a `DEVICE_SPEC`.
@@ -179,17 +174,11 @@ Starts a server that allows the device's details, commands, and documentation to
   > `scig: $device_spec_file: No such file or directory`
 
   - (*cont.*) After writing the error message, the `scig` process will terminate with an error code of `1` (general error)
-  - `scig` requires non-exclusive read access to `device_spec_file` at initialization time. If another process has locked `device_spec_file` from read access then the following message will be written to the standard error (`STDERR`)
+  - `scig` requires non-exclusive read access to `device_spec_file` at initialization time. If another process has locked `device_spec_file` from read access or if the `scig` process has insufficient privellages to read `device_spec_file` then the following message will be written to the standard error (`STDERR`)
 
-  > `scig: Cannot open $device_spec_file. It is in use by another process ($process_information)`
-
-  - (*cont.*) After writing the error message, the `scig` process will terminate with an error code of `1` (general error)
-  - If the `scig` process does not have sufficient privellages to read `device_spec_file` then the following message will be written to the standard error:
-
-  > `scig: Cannot open $device_spec_file. Insufficient privellages.`
+  > `scig: Cannot open $device_spec_file. Access denied.`
 
   - (*cont.*) After writing the error message, the `scig` process will terminate with an error code of `1` (general error)
-  - The `scig` process should open `device_spec_file` with shared read access permissions
   - The `scig` process should read the entire contents of `device_spec_file` at initialization time
   - Once the `scig` process finished reading `device_spec_file`, it should release its handle. This is to facilicate scenarios in which many `scig` processes are created from the same `device_spec_file`
   - The general format of `device_spec_file` is that it must be a text file that uses a standard character_encoding (utf-8). If `device_spec_file` does not have that format then the following message will be written to the standard error:
@@ -217,12 +206,8 @@ Starts a server that allows the device's details, commands, and documentation to
   > `scig: The supplied serial port ($device_port) does not exist.`
 
   - (*cont.*) After writing the error message, the `scig` process will terminate with an error code of `1` (general error)
-  - `scig` needs exclusive read/write access to `device_port`. If `device_port` is already being in use by another process then the following message will be written to the standard error:
 
-  > `scig: The supplied serial port ($device_port) is already in use by another process ($process_details)`
-
-  - (*cont.*) After writing the error message, the `scig` process will be terminated with an error code of `1` (general error)
-  - The `scig` process having insufficient privellages to open `device_port` will result in the following message being written to the standard error
+  - The `scig` process having insufficient privellages to open `device_port` or if `device_port` is already being in use by another process then the following message will be written to the standard error will result in the following message being written to the standard error
 
   > `scig: Cannot open the supplied serial port ($device_port). Access is denied.`
 
@@ -498,8 +483,8 @@ Behaviors:
 summary: Set the position of the autosampler
   outgoing_message:
     format: SET_POS $sample_position
-	$sample_position type: string
-	$sample_position description: The position of the sample (e.g. A2)
+        $sample_position type: string
+        $sample_position description: The position of the sample (e.g. A2)
   expected_response:
     pattern: ^(.+?) (.+?)$
     $1 type: string
@@ -550,16 +535,16 @@ The following keys make up a `COMMAND_DESCRIPTION`:
 
 ```
     outgoing_message:
-		is_always: TAKE_MEASUREMENT
+                is_always: TAKE_MEASUREMENT
 ```
 
 An example of an `OUTGOING_MESSAGE` that supports variance is:
 
 ```
-	outgoing_message:
-	    format: OUT_NAME $new_name
-		$new_name type: string
-		$new_name description: The new name of the device
+        outgoing_message:
+            format: OUT_NAME $new_name
+                $new_name type: string
+                $new_name description: The new name of the device
 ```
 
 ### `has_format: TEMPLATE`
@@ -607,7 +592,7 @@ For example, the specification of a response that is always the same is:
 
 ```
 incoming_response_template:
-	pattern: OK
+        pattern: OK
 ```
 
 If the device does not respond with "`OK`" then a runtime error will occur.
@@ -616,9 +601,9 @@ An example of a response that needs to be parsed for a single variable would be:
 
 ```
 incoming_response_template:
-	pattern: NEW_NAME_IS (.+)
-	$1 identifier: new_name
-	$1 description: The device's new name
+        pattern: NEW_NAME_IS (.+)
+        $1 identifier: new_name
+        $1 description: The device's new name
 ```
 If the device does not respond with, for example, "`NEW_NAME_IS FOO_DEVICE`" then a runtime error will occur.
 
@@ -626,12 +611,12 @@ An example of a response that needs to be parsed for multiple variables would be
 
 ```
 incoming_response_template:
-	pattern: OLD_NAME_WAS (.+?) NUMBER_OF_NAME_CHANGES (\d+)
-	$1 identifier: old_name
-	$1 description: The old name of the device
-	$2 identifier: number_of_name_changes
-	$2 desctiption: The number of times the name has changed
-	$2 type: int
+        pattern: OLD_NAME_WAS (.+?) NUMBER_OF_NAME_CHANGES (\d+)
+        $1 identifier: old_name
+        $1 description: The old name of the device
+        $2 identifier: number_of_name_changes
+        $2 desctiption: The number of times the name has changed
+        $2 type: int
 ```
 
 If the device does not respond with, for example, "`OLD_NAME_WAS FOO NUMBER_OF_NAME_CHANGES 3`" then a runtime error will occur. Also, because the second capture group's type is `int` but `\d+` may also match decimals (e.g. `3.3`) a runtime error would still occur for a response of "`OLD_NAME_WAS FOO NUMBER_OF_NAME_CHANGES 3.3`". This is because, even though the response matches the specified `pattern`, the capture group could not be parsed into an `int` datatype.
