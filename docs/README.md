@@ -156,15 +156,14 @@ Starts a server that allows the device's details, commands, and documentation to
   - `<port>` is validated and allocated during the initialization of `scig`
   - A malformed `<port>` will result in the following message being written to the standard error:
 
-  > `scig: The supplied port ($<port>) is not valid. The port must be a number between 1-65535`.
+  > `scig: $<port> is not a valid TCP port. The port must be a number between 1-65535`.
 
   - (*cont.*) After writing that error message, the `scig` process will terminate with an exit code of `1` (general error)
-  - If `<port>` is already in use by another process or the `scig` process has insufficient privellages to open `<port>` then the following message shall be written the standard error:
+  - If the `scig` process has insufficient privellages to open `<port>` then the following message shall be written the standard error:
 
- > `scig: Cannot open the supplied port ($<port>). Access is denied.`
+ > `scig: Cannot open port ($<port>). Permission denied.`
 
   - (*cont.*) After writing the error message, the `scig` process will terminate with an exit code of `1` (general error)
-  -
 
 ##### `device_spec_file`
 *Required*. A path to a file containing a `DEVICE_SPEC`.
@@ -172,18 +171,6 @@ Starts a server that allows the device's details, commands, and documentation to
   - A non-existient `device_spec_file` path will result in the following error message being written to the standard output (`STDERR`):
 
   > `scig: $device_spec_file: No such file or directory`
-
-  - (*cont.*) After writing the error message, the `scig` process will terminate with an error code of `1` (general error)
-  - `scig` requires non-exclusive read access to `device_spec_file` at initialization time. If another process has locked `device_spec_file` from read access or if the `scig` process has insufficient privellages to read `device_spec_file` then the following message will be written to the standard error (`STDERR`)
-
-  > `scig: Cannot open $device_spec_file. Access denied.`
-
-  - (*cont.*) After writing the error message, the `scig` process will terminate with an error code of `1` (general error)
-  - The `scig` process should read the entire contents of `device_spec_file` at initialization time
-  - Once the `scig` process finished reading `device_spec_file`, it should release its handle. This is to facilicate scenarios in which many `scig` processes are created from the same `device_spec_file`
-  - The general format of `device_spec_file` is that it must be a text file that uses a standard character_encoding (utf-8). If `device_spec_file` does not have that format then the following message will be written to the standard error:
-
-  > `scig: The format of $device_spec_file is not recognized. device_spec_file should be a plaintext file that uses a standard text character_encoding convention (e.g. utf-8)`
 
   - (*cont.*) After writing the error message, the `scig` process will terminate with an error code of `1` (general error)
   - The text content of `device_spec_file` must follow the schema specified in `DEVICE_SPEC`. If it does not then the following error message with this general format will be written to the standard error (`STDERR`):
@@ -198,7 +185,7 @@ Starts a server that allows the device's details, commands, and documentation to
   - `device_port` is validated and allocated during the initialization of `scig`
   - A malformed `device_port` value will result in the following error message being written to the standard error:
 
-  > `scig: The supplied device port ($device_port) is not a valid serial port identifier. $platform_dependant_text`
+  > `scig: $device_port is not a valid serial port identifier. $platform_dependant_text`
 
   - (*cont.*) The error message will contain platform-dependant messages. This is because operating systems have differing methods of identifying communication ports (e.g. `COMn` in windows, `/dev/ttySn` in *nix). After writing the error message, the `scig` process will terminate with an exit code of `1` (general error)
   - A valid, but non-existient, `device_port` value will result in the following messge being written to the standard error:

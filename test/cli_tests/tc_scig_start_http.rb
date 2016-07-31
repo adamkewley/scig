@@ -65,15 +65,16 @@ class TestScigStartHttp < Test::Unit::TestCase
 
     assert_not_equal 0, outputs[:exit_code]
 
-    expected_error_message = "scig: The supplied port (#{an_invalid_port_identifier}) is not valid. The port number must be between 1-65535\n"
+    expected_error_message = "scig: #{an_invalid_port_identifier} is not a valid TCP port. The port number must be between 1-65535\n"
 
     assert_equal expected_error_message, outputs[:stdout]
   end
 
   def test_provide_port_in_use_results_in_error
-    expected_error_message = "scig: Cannot open the supplied port ($<port>). Access is denied."
     begin
       port = get_available_tcp_port
+      expected_error_message = "scig: Cannot open port #{port}: Permission denied."
+
       # Block open a port
       socket = TCPServer.open('localhost', port)
 
@@ -89,9 +90,9 @@ class TestScigStartHttp < Test::Unit::TestCase
     end
   end
 
-  def test_provide_non_existent_device_spec_path_results_in_error
-    expected_error_message = "scig: $device_spec_file: No such file or directory"
-    device_spec_path = '/this/really/shouldnt/exist'
+  def test_provide_non_existentient_device_spec_path_results_in_error
+    device_spec_path = generate_temporary_file_path
+    expected_error_message = "scig: #{device_spec_path}: No such file or directory"
     port = get_available_tcp_port
 
     return_value =
@@ -102,11 +103,11 @@ class TestScigStartHttp < Test::Unit::TestCase
     assert_equal expected_error_message, return_value[:stderr]
   end
 
-  def test_provide_device_spec_in_use_or_insufficient_privillages_results_in_error
-    expected_error_message = "scig: Cannot open $device_spec_file. Access denied."
-
+  def test_provide_insufficient_permission_to_read__device_spec_results_in_error
     begin
       path = create_temporary_file
+      expected_error_message = "scig: #{path}: Permission denied."
+
       port = get_available_tcp_port
 
       # 'w' should lock it open
@@ -121,23 +122,6 @@ class TestScigStartHttp < Test::Unit::TestCase
     ensure
       fd.close
     end
-  end
-
-  def test_scig_releases_handle_to_device_spec_file_after_initializing
-    # The `scig` process should read the entire contents of
-    # `device_spec_file` at initialization time
-
-    # TODO: How do we know it's initialized? We need something to be
-    # written to the STDOUT to tell us that
-  end
-
-  def test_invalid_data_format_for_device_spec_results_in_error
-    expected_error_message = "scig: The format of $device_spec_file is not recognized. device_spec_file should be a plaintext file that uses a standard text character_encoding convention (e.g. utf-8)"
-
-    # TODO: Create a noisy binary file (just cat /dev/rand into a
-    # file) and supply that
-
-    assert false
   end
 
   def test_validation_errors_in_device_spec_results_in_error
